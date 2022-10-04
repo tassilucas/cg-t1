@@ -25,18 +25,22 @@ renderer.setClearColor("rgb(30, 30, 42)");
 const aspect = window.innerWidth/window.innerHeight;
 const distance = 10
 
-var camera = new THREE.OrthographicCamera(-distance*aspect, distance*aspect, distance, -distance, 1, 1000);
-camera.position.set(20, 20, 20);
+// Camera styles
+var parallelCamera = new THREE.OrthographicCamera(-distance*aspect, distance*aspect, distance, -distance, 1, 1000);
+var perspectiveCamera = new THREE.PerspectiveCamera(5.7, aspect, 0.1, 1000);
+
+// Current camera. Using parallel viewing as default.
+var camera = parallelCamera;
+camera.position.set(120, 120, 120);
 camera.lookAt(scene.position);
 
-var trackballControls = new TrackballControls( camera, renderer.domElement );
-window.addEventListener('resize', function(){onWindowResize(camera, renderer)}, false);
+window.addEventListener('resize', function(){onWindowResize(camera, renderer)}, true);
 
 var firstPlane = createGroundPlaneWired(20, 20, 60, 60, "rgb(204,204,0)");
 firstPlane.translateZ(0.1);
 scene.add(firstPlane);
 
-var secondPlane = createGroundPlane(50, 50, 60, 60, "rgb(255,239,213)");
+var secondPlane = createGroundPlane(100, 100, 60, 60, "rgb(255,239,213)");
 secondPlane.rotateX(THREE.MathUtils.degToRad(-90));
 scene.add(secondPlane);
 
@@ -173,7 +177,6 @@ function highlightIntersectedCubes(){
       intersects[i].object.selected = false;
     }
     else{
-      console.log(intersects[i].object);
       intersects[i].object.material = new THREE.MeshLambertMaterial({color: "rgb(0, 255, 0)"});
       intersects[i].object.selected = true;
     }
@@ -187,13 +190,26 @@ function resetMouse(){
   pointer.x = pointer.y = -10000;
 }
 
+function updateCamera(){
+  keyboard.update();
+
+  if(keyboard.down("C")){
+    if(camera == perspectiveCamera)
+      camera = parallelCamera;
+    else
+      camera = perspectiveCamera;
+  }
+
+  camera.position.set(120+man.position.x, 120, 120+man.position.z);
+  camera.lookAt(man.position);
+}
+
 function render()
 {
-  trackballControls.update();
+  requestAnimationFrame(render);
+
   raycaster.setFromCamera(pointer, camera);
   highlightIntersectedCubes();
-  requestAnimationFrame(render);
-  renderer.render(scene, camera);
 
   // Working on man animation
   var delta = clock.getDelta();
@@ -202,4 +218,9 @@ function render()
 
   // Working on man moves
   updateMan(delta);
+
+  // Working on camera moves
+  updateCamera()
+
+  renderer.render(scene, camera);
 }
