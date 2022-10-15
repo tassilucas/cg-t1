@@ -16,7 +16,7 @@ var keyboard = new KeyboardState();
 
 var scene = new THREE.Scene();
 var clock = new THREE.Clock();
-var material = setDefaultMaterial();
+var material = setDefaultMaterial("#f7e89a");
 initDefaultBasicLight(scene);
 
 var renderer = initRenderer();
@@ -36,12 +36,9 @@ camera.lookAt(scene.position);
 
 window.addEventListener('resize', function(){onWindowResize(camera, renderer)}, true);
 
-var firstPlane = createGroundPlaneWired(20, 20, 60, 60, "rgb(204,204,0)");
-firstPlane.translateZ(0.1);
-scene.add(firstPlane);
-
-var secondPlane = createGroundPlane(100, 100, 60, 60, "rgb(255,239,213)");
+var secondPlane = createGroundPlane(200, 200, 60, 60, "#cdbb59");
 secondPlane.rotateX(THREE.MathUtils.degToRad(-90));
+secondPlane.translateZ(-0.1)
 scene.add(secondPlane);
 
 var axesHelper = new THREE.AxesHelper( 2 );
@@ -53,6 +50,16 @@ const keysPressed = {}
 document.addEventListener('keydown', (event) => { keysPressed[event.key.toLowerCase()] = true }, false);
 document.addEventListener('keyup', (event) => { keysPressed[event.key.toLowerCase()] = false }, false);
 
+var directionOffset;
+
+var box = undefined;
+var mesh = undefined;
+var imaginaryBox = undefined;
+var helper = undefined;
+
+var lastDirection = undefined;
+var collision = false;
+
 const A = "a";
 const W = "w";
 const D = "d";
@@ -63,10 +70,21 @@ const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 resetMouse();
 renderer.domElement.addEventListener('click', onPointerClick, true);
-var selectedCube;
+
+var debug = true;
+
+// Colors
+const colorOutline = "#f7e89a";
+const edgeOutline = "#a3985e";
+
+const colorRandom = "#C4B454";
+const edgeRandom = "#9b8a36";
+
+const colorTile = "#fce883";
+const edgeTile = "#8C8148";
 
 //----------------------------------------------------------------------------
-var man = null;
+var man = undefined;
 var time = 0;
 var mixer = new Array();
 var mixerAnimations = new Array();
@@ -79,25 +97,82 @@ var cubes = [];
 // Load animated files
 loadGLTFFile('../assets/objects/walkingMan.glb');
 
-// Adding some random cubes
-addCube(0, 10, 0);
-addCube(10, 2, 0);
-addCube(0, 2, 10);
+generateRandomCubes();
+contornaPlano();
+createTileGround();
 
 render();
+
+function randomInteger(min, max) {
+  let integer = Math.floor(Math.random() * (max - min) ) + min;
+  return (integer % 2 == 0) ? integer + 1 : integer;
+}
+
+function contornaPlano(){
+  for(let z=-49; z<=49; z = z + 2){
+    addCube(-49, 1, z, false, colorOutline, edgeOutline, 2, 2, 2, 2);
+    addCube(49, 1, z, false, colorOutline, edgeOutline, 2, 2, 2, 2);
+  }
+
+  for(let x=-47; x<=47; x = x + 2){
+    addCube(x, 1, -49, false, colorOutline, edgeOutline, 2, 2, 2, 2);
+    addCube(x, 1, 49, false, colorOutline, edgeOutline, 2, 2, 2, 2);
+  }
+}
+
+function createTileGround(){
+  let planeGeometry = new THREE.PlaneGeometry(100, 100, 50, 50);
+  var planeMaterial = new THREE.MeshPhongMaterial({
+    color: colorTile,
+    polygonOffset: true,
+    polygonOffsetFactor: 1,
+    polygonOffsetUnits: 1
+  });
+
+  var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+  plane.rotateX(-Math.PI/2);
+
+  const gridHelper = new THREE.GridHelper(100, 50, edgeTile, edgeTile);
+  gridHelper.material.linewidth = 3.5;
+
+  scene.add(gridHelper);
+  scene.add(plane);
+}
+
+function generateRandomCubes(){
+  let randomCubes = 30;
+
+  for(let i=0; i<randomCubes; i++){
+      let x = randomInteger(-48, 48);
+      let z = randomInteger(-48, 48);
+
+      addCube(x, 1, z, true, colorRandom, edgeRandom, 2, 2, 2);
+  }
+}
 
 function loadGLTFFile(modelName)
 {
   var loader = new GLTFLoader( );
   loader.load( modelName, function ( gltf ) {
     var obj = gltf.scene;
+
     man = obj;
-    obj.rotateY(3);
-    scene.add(obj);
+    man.rotateY(3);
+    scene.add(man);
 
     var mixerLocal = new THREE.AnimationMixer(obj);
     mixer.push(mixerLocal);
-    mixerAnimations.push(gltf.animations);
+    mixerAnimations.push(gltf.animations)
+
+    // Imaginary box
+    const imaginaryBoxGeometry = new THREE.BoxGeometry(1, 1, 1);
+    const imaginaryBoxEdges = new THREE.EdgesGeometry(imaginaryBoxGeometry);
+    imaginaryBox = new THREE.LineSegments(imaginaryBoxEdges, new THREE.LineBasicMaterial({color: 0xffffff}));
+
+    // Box config.
+    box = new THREE.Box3().setFromObject(imaginaryBox);
+    helper = new THREE.BoxHelper(imaginaryBox, 0xffff00);
+    scene.add(helper);
     });
 }
 
@@ -130,29 +205,101 @@ function findDirectionOffset(keysPressed) {
   return directionOffset
 }
 
+function isColliding(){
+  for(let i=0; i<cubes.length; i++)
+    if(box.intersectsBox(cubes[i].box)){
+      console.log("Collision detected");
+      return true;
+    }
+
+  return false;
+}
+
+function noProblems(lastDirection, directionOffset){
+  if(lastDirection == 0 || lastDirection == Math.PI || lastDirection == Math.PI / 2){
+    if(directionOffset - Math.PI/4 == lastDirection || directionOffset + Math.PI/4 == lastDirection)
+      return false
+  }
+
+  if(lastDirection == -Math.PI / 2){
+    if(directionOffset == Math.PI / 4 + Math.PI || directionOffset - Math.PI/4 == lastDirection)
+      return false
+  }
+
+  return true;
+}
+
+function canMove(collisionFace, newDirection){
+  if(collisionFace == Math.PI &&
+    (newDirection == collisionFace - Math.PI/4
+      || newDirection == collisionFace + Math.PI/4))
+    return false;
+
+  if(collisionFace == Math.PI/2 &&
+    (newDirection == collisionFace - Math.PI/4
+      || newDirection == collisionFace + Math.PI/4))
+    return false;
+
+  if(collisionFace == 0 &&
+    (newDirection == collisionFace - Math.PI/4
+      || newDirection == collisionFace + Math.PI/4))
+    return false;
+
+  if(collisionFace == -Math.PI/2 &&
+    (newDirection == Math.PI + Math.PI/4
+      || newDirection == collisionFace + Math.PI/4))
+    return false;
+
+  return true;
+}
+
 function updateMan(delta)
 {
   const manSpeed = 0.1;
   const directionPressed = [W, A, S, D].some(key => keysPressed[key] == true)
 
   if(directionPressed){
-    var directionOffset = findDirectionOffset(keysPressed);
+    directionOffset = findDirectionOffset(keysPressed);
     rotateQuarternion.setFromAxisAngle(rotateAngle, directionOffset);
-    man.quaternion.rotateTowards(rotateQuarternion, 0.2);
-    man.translateZ(manSpeed);
-    mixer[0].clipAction(mixerAnimations[0][0]).play();
-  }
-  else{
-    mixer[0].clipAction(mixerAnimations[0][0]).stop();
+    man.quaternion.rotateTowards(rotateQuarternion, +Infinity);
+    imaginaryBox.quaternion.rotateTowards(rotateQuarternion, +Infinity);
+
+    box.setFromObject(imaginaryBox);
+
+    if(lastDirection != directionOffset){
+      if(canMove(lastDirection, directionOffset)){
+        man.translateZ(manSpeed);
+        imaginaryBox.translateZ(manSpeed);
+      }
+    }
+
+    if(isColliding()){
+      // Grabbing the face of collision
+      if(lastDirection == undefined)
+        lastDirection = directionOffset;
+    }
+    else
+      lastDirection = undefined;
   }
 }
 
-function addCube(x, y, z){
-  let cubeGeometry = new THREE.BoxGeometry(4, 4, 4);
-  let cube = new THREE.Mesh(cubeGeometry, material);
+function addCube(x, y, z, clickable, color, edge, i, j, k, linewidth){
+  let cubeGeometry = new THREE.BoxGeometry(i, j, k);
+  let cube = new THREE.Mesh(cubeGeometry, setDefaultMaterial(color));
   cube.position.set(x, y, z);
   cube.castShadow = true;
   cube.receiveShadow = true;
+
+  var edgeGeometry = new THREE.EdgesGeometry(cube.geometry);
+  let edgeMaterial = new THREE.LineBasicMaterial({ color: edge, linewidth: linewidth });
+  var edges = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+  cube.add(edges);
+
+  // Adding also colliding box
+  cube.box = new THREE.Box3().setFromObject(cube);
+
+  // If cube is interactive
+  cube.clickable = clickable;
 
   scene.add(cube);
   cubes.push(cube);
@@ -167,22 +314,22 @@ function highlightIntersectedCubes(){
   const intersects = raycaster.intersectObjects(cubes);
 
   for(let i=0; i<intersects.length; i++){
-    const r = intersects[i].object.material.color.r;
-    const g = intersects[i].object.material.color.g;
-    const b = intersects[i].object.material.color.b;
+    if(intersects[i].object.clickable){
+      const r = intersects[i].object.material.color.r;
+      const g = intersects[i].object.material.color.g;
+      const b = intersects[i].object.material.color.b;
 
-
-    if(intersects[i].object.selected){
-      intersects[i].object.material = new THREE.MeshLambertMaterial({color: "rgb(255, 20, 20)"})
-      intersects[i].object.selected = false;
-    }
-    else{
-      intersects[i].object.material = new THREE.MeshLambertMaterial({color: "rgb(0, 255, 0)"});
-      intersects[i].object.selected = true;
+      if(intersects[i].object.selected){
+        intersects[i].object.material = new THREE.MeshLambertMaterial({color: "rgb(255, 20, 20)"})
+        intersects[i].object.selected = false;
+      }
+      else{
+        intersects[i].object.material = new THREE.MeshLambertMaterial({color: "rgb(0, 255, 0)"});
+        intersects[i].object.selected = true;
+      }
     }
   }
 
-  // reseting mouse position
   resetMouse()
 }
 
@@ -215,12 +362,14 @@ function render()
   var delta = clock.getDelta();
   for(var i = 0; i<mixer.length; i++)
     mixer[i].update(delta);
+  mixer[0].clipAction(mixerAnimations[0][0]).play();
 
   // Working on man moves
   updateMan(delta);
-
+  helper.update();
+  
   // Working on camera moves
-  updateCamera()
+  updateCamera();
 
   renderer.render(scene, camera);
 }
