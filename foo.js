@@ -215,20 +215,6 @@ function isColliding(){
   return false;
 }
 
-function noProblems(lastDirection, directionOffset){
-  if(lastDirection == 0 || lastDirection == Math.PI || lastDirection == Math.PI / 2){
-    if(directionOffset - Math.PI/4 == lastDirection || directionOffset + Math.PI/4 == lastDirection)
-      return false
-  }
-
-  if(lastDirection == -Math.PI / 2){
-    if(directionOffset == Math.PI / 4 + Math.PI || directionOffset - Math.PI/4 == lastDirection)
-      return false
-  }
-
-  return true;
-}
-
 function canMove(collisionFace, newDirection){
   if(collisionFace == Math.PI &&
     (newDirection == collisionFace - Math.PI/4
@@ -261,8 +247,8 @@ function updateMan(delta)
   if(directionPressed){
     directionOffset = findDirectionOffset(keysPressed);
     rotateQuarternion.setFromAxisAngle(rotateAngle, directionOffset);
-    man.quaternion.rotateTowards(rotateQuarternion, +Infinity);
-    imaginaryBox.quaternion.rotateTowards(rotateQuarternion, +Infinity);
+    man.quaternion.rotateTowards(rotateQuarternion, 1);
+    imaginaryBox.quaternion.rotateTowards(rotateQuarternion, 1);
 
     box.setFromObject(imaginaryBox);
 
@@ -315,15 +301,13 @@ function highlightIntersectedCubes(){
 
   for(let i=0; i<intersects.length; i++){
     if(intersects[i].object.clickable){
-      const r = intersects[i].object.material.color.r;
-      const g = intersects[i].object.material.color.g;
-      const b = intersects[i].object.material.color.b;
 
       if(intersects[i].object.selected){
-        intersects[i].object.material = new THREE.MeshLambertMaterial({color: "rgb(255, 20, 20)"})
+        intersects[i].object.material = intersects[i].object.lastMaterial;
         intersects[i].object.selected = false;
       }
       else{
+        intersects[i].object.lastMaterial = intersects[i].object.material;
         intersects[i].object.material = new THREE.MeshLambertMaterial({color: "rgb(0, 255, 0)"});
         intersects[i].object.selected = true;
       }
