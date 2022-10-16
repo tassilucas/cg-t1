@@ -172,7 +172,7 @@ function loadGLTFFile(modelName)
     // Box config.
     box = new THREE.Box3().setFromObject(imaginaryBox);
     helper = new THREE.BoxHelper(imaginaryBox, 0xffff00);
-    scene.add(helper);
+    // scene.add(helper);
     });
 }
 
@@ -239,24 +239,39 @@ function canMove(collisionFace, newDirection){
   return true;
 }
 
+function movePlayer(manSpeed, directionOffset){
+  let playerPosition = man.position.clone();
+
+  let vSpeed = manSpeed*Math.cos(directionOffset);
+  let hSpeed = manSpeed*Math.sin(directionOffset);
+
+  playerPosition.z += vSpeed;
+  playerPosition.x += hSpeed;
+
+  man.position.lerp(playerPosition, 0.01);
+  imaginaryBox.position.lerp(playerPosition, 0.01);
+}
+
 function updateMan(delta)
 {
-  const manSpeed = 0.1;
+  const manSpeed = 10;
   const directionPressed = [W, A, S, D].some(key => keysPressed[key] == true)
 
   if(directionPressed){
     directionOffset = findDirectionOffset(keysPressed);
+
+    // Rotating player
     rotateQuarternion.setFromAxisAngle(rotateAngle, directionOffset);
-    man.quaternion.rotateTowards(rotateQuarternion, 1);
-    imaginaryBox.quaternion.rotateTowards(rotateQuarternion, 1);
+    man.quaternion.slerp(rotateQuarternion, 0.1);
+
+    if(directionOffset == Math.PI || directionOffset == 0 || directionOffset == Math.PI / 2 || directionOffset == - Math.PI / 2)
+      imaginaryBox.quaternion.slerp(rotateQuarternion, 1);
 
     box.setFromObject(imaginaryBox);
 
     if(lastDirection != directionOffset){
-      if(canMove(lastDirection, directionOffset)){
-        man.translateZ(manSpeed);
-        imaginaryBox.translateZ(manSpeed);
-      }
+      if(canMove(lastDirection, directionOffset))
+        movePlayer(manSpeed, directionOffset);
     }
 
     if(isColliding()){
