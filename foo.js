@@ -22,16 +22,11 @@ initDefaultBasicLight(scene);
 var renderer = initRenderer();
 renderer.setClearColor("rgb(30, 30, 42)");
 
-const aspect = window.innerWidth/window.innerHeight;
-const distance = 10
-
-// Camera styles
-var parallelCamera = new THREE.OrthographicCamera(-distance*aspect, distance*aspect, distance, -distance, 1, 1000);
-var perspectiveCamera = new THREE.PerspectiveCamera(5.7, aspect, 0.1, 1000);
-
-// Current camera. Using parallel viewing as default.
-var camera = parallelCamera;
-camera.position.set(120, 120, 120);
+// Dimetric perspective
+const frustumSize = 25;
+const aspect = window.innerWidth / window.innerHeight;
+let camera = new THREE.OrthographicCamera(frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 0.1, 100);
+camera.position.setFromSphericalCoords(30, Math.PI / 3, Math.PI / 4);
 camera.lookAt(scene.position);
 
 window.addEventListener('resize', function(){onWindowResize(camera, renderer)}, true);
@@ -284,6 +279,13 @@ function updateMan(delta)
   }
 }
 
+function updateCamera(){
+  camera.position.setFromSphericalCoords(30, Math.PI / 3, Math.PI / 4);
+  camera.position.x = 20 + man.position.x
+  camera.position.z = 20 + man.position.z
+  camera.lookAt(man.position);
+}
+
 function addCube(x, y, z, clickable, color, edge, i, j, k, linewidth){
   let cubeGeometry = new THREE.BoxGeometry(i, j, k);
   let cube = new THREE.Mesh(cubeGeometry, setDefaultMaterial(color));
@@ -336,22 +338,13 @@ function resetMouse(){
   pointer.x = pointer.y = -10000;
 }
 
-function updateCamera(){
-  keyboard.update();
-
-  if(keyboard.down("C")){
-    if(camera == perspectiveCamera)
-      camera = parallelCamera;
-    else
-      camera = perspectiveCamera;
-  }
-
-  camera.position.set(120+man.position.x, 120, 120+man.position.z);
-  camera.lookAt(man.position);
-}
-
 function render()
 {
+  // Resize camera
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize( window.innerWidth, window.innerHeight );
+
   requestAnimationFrame(render);
 
   raycaster.setFromCamera(pointer, camera);
@@ -366,8 +359,7 @@ function render()
   // Working on man moves
   updateMan(delta);
   helper.update();
-  
-  // Working on camera moves
+
   updateCamera();
 
   renderer.render(scene, camera);
