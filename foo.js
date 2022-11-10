@@ -11,6 +11,7 @@ import {initRenderer,
         createGroundPlaneWired,
         getMaxSize,
         onWindowResize} from "../libs/util/util.js";
+import {CSG} from "../libs/other/CSGMesh.js";
 
 var keyboard = new KeyboardState();
 
@@ -30,11 +31,6 @@ camera.position.setFromSphericalCoords(30, Math.PI / 3, Math.PI / 4);
 camera.lookAt(scene.position);
 
 window.addEventListener('resize', function(){onWindowResize(camera, renderer)}, true);
-
-var secondPlane = createGroundPlane(200, 200, 60, 60, "#cdbb59");
-secondPlane.rotateX(THREE.MathUtils.degToRad(-90));
-secondPlane.translateZ(-0.1)
-scene.add(secondPlane);
 
 var axesHelper = new THREE.AxesHelper( 2 );
 axesHelper.visible = true;
@@ -89,13 +85,32 @@ var rotateQuarternion = new THREE.Quaternion();
 
 var cubes = [];
 
+let door1, door2, door3;
+
 // Load animated files
 loadGLTFFile('../assets/objects/walkingMan.glb');
 
-generateRandomCubes();
-contornaPlano();
-createTileGround();
+function setup(){
+  contornaPlano();
+  createDoors();
 
+  // Main plane
+  createTileGround(0, 0, 0, 52, 52, true);
+
+  // Area 1
+  createTileGround(63, -3, 3, 52, 52, true);
+
+  // Area 2
+  createTileGround(-63, -3, 3, 52, 52, true);
+
+  // Area 3
+  createTileGround(0, -3, -60, 52, 52, true);
+
+  // Area 4
+  createTileGround(0, -3, 60, 52, 52, true);
+}
+
+setup();
 render();
 
 function randomInteger(min, max) {
@@ -103,20 +118,63 @@ function randomInteger(min, max) {
   return (integer % 2 == 0) ? integer + 1 : integer;
 }
 
+
+function createDoors(){
+  // Base objects
+  let cubeMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 8, 6));
+  let insideMesh = new THREE.Mesh(new THREE.BoxGeometry(5, 7, 4));
+
+  // CSG holders
+  let csgObject, cubeCSG, cylinderCSG;
+
+  // Object 2 - Cube INTERSECT Cylinder
+  insideMesh.position.set(1, -0.5, 0.0)
+  insideMesh.matrixAutoUpdate = false;
+  insideMesh.updateMatrix();
+  cylinderCSG = CSG.fromMesh(insideMesh)
+  cubeCSG = CSG.fromMesh(cubeMesh)   
+  csgObject = cubeCSG.subtract(cylinderCSG) // Execute intersection
+
+  door1 = CSG.toMesh(csgObject, new THREE.Matrix4())
+  door1.material = new THREE.MeshPhongMaterial({color: 'lightblue'})
+  door1.position.set(-25, 4, -1)
+
+  door2 = door1.clone();
+  door2.position.set(25, 4, -1);
+
+  door3 = door1.clone();
+  door3.rotateY(Math.PI/2);
+  door3.position.set(1, 4, 25);
+
+  scene.add(door1)
+  scene.add(door2)
+  scene.add(door3)
+}
+
 function contornaPlano(){
-  for(let z=-49; z<=49; z = z + 2){
-    addCube(-49, 1, z, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-    addCube(49, 1, z, false, colorOutline, edgeOutline, 2, 2, 2, 2);
+  for(let x=-23; x<-1; x = x + 2){
+    addCube(x, 1, 25, false, colorOutline, edgeOutline, 2, 2, 2, 2);
+    addCube(x, 1, -25, false, colorOutline, edgeOutline, 2, 2, 2, 2);
   }
 
-  for(let x=-47; x<=47; x = x + 2){
-    addCube(x, 1, -49, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-    addCube(x, 1, 49, false, colorOutline, edgeOutline, 2, 2, 2, 2);
+  for(let x=5; x<=23; x = x + 2){
+    addCube(x, 1, 25, false, colorOutline, edgeOutline, 2, 2, 2, 2);
+    addCube(x, 1, -25, false, colorOutline, edgeOutline, 2, 2, 2, 2);
+  }
+
+  for(let z=3; z<25; z = z + 2){
+    addCube(25, 1, z, false, colorOutline, edgeOutline, 2, 2, 2, 2);
+    addCube(-25, 1, z, false, colorOutline, edgeOutline, 2, 2, 2, 2);
+  }
+
+  for(let z=-23; z<-3; z = z + 2){
+    addCube(25, 1, z, false, colorOutline, edgeOutline, 2, 2, 2, 2);
+    addCube(-25, 1, z, false, colorOutline, edgeOutline, 2, 2, 2, 2);
   }
 }
 
-function createTileGround(){
-  let planeGeometry = new THREE.PlaneGeometry(100, 100, 50, 50);
+function createTileGround(x, y, z, largura, altura, tiled){
+  let planeGeometry = new THREE.PlaneGeometry(largura, altura, 50, 50);
   var planeMaterial = new THREE.MeshPhongMaterial({
     color: colorTile,
     polygonOffset: true,
@@ -125,24 +183,17 @@ function createTileGround(){
   });
 
   var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+  plane.position.set(x, y, z);
   plane.rotateX(-Math.PI/2);
 
-  const gridHelper = new THREE.GridHelper(100, 50, edgeTile, edgeTile);
-  gridHelper.material.linewidth = 3.5;
-
-  scene.add(gridHelper);
-  scene.add(plane);
-}
-
-function generateRandomCubes(){
-  let randomCubes = 30;
-
-  for(let i=0; i<randomCubes; i++){
-      let x = randomInteger(-48, 48);
-      let z = randomInteger(-48, 48);
-
-      addCube(x, 1, z, true, colorRandom, edgeRandom, 2, 2, 2);
+  if(tiled){
+    const gridHelper = new THREE.GridHelper(largura, largura/2, edgeTile, edgeTile);
+    gridHelper.position.set(x, y, z);
+    gridHelper.material.linewidth = 3.5;
+    scene.add(gridHelper);
   }
+
+  scene.add(plane);
 }
 
 function loadGLTFFile(modelName)
