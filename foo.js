@@ -87,6 +87,7 @@ var cubes = [];
 var highlightedCube = undefined;
 
 let door1, door2, door3;
+let doors = [];
 
 let blocosPonte = [[false, false], [false, false], [false, false]];
 
@@ -104,6 +105,8 @@ let interruptores = [];
 let blocosInterruptores = [];
 let arrayInterruptores = [false, false, false];
 let area3Actioned = false;
+
+let plataformaEnd;
 
 // Load animated files
 loadGLTFFile('../assets/objects/walkingMan.glb', true);
@@ -126,8 +129,6 @@ function setup(){
   // Main plane
   createTileGround(0, 0, 0, 52, 52, true);
 
-  createTileGround(-63, -3, 3, 52, 52, true);
-
   // Area 1
   createTileGround(0, -3, -50, 52, 32, true, 0xEAEA97);
 
@@ -136,6 +137,10 @@ function setup(){
 
   // Area 3
   createTileGround(63, -3, 3, 52, 52, true, 0xEAEA97);
+
+  // Area 4
+  createTileGround(-30, 0, 0, 20, 20, true);
+  plataformaEnd = addCube(-33, 0, 0, true, colorOutline, edgeOutline, 2, 0.1, 2, 2);
 
   area1Setup();
   area2Setup();
@@ -365,14 +370,27 @@ function createDoors(){
   door1.position.set(-25, 4, -1)
   door1.castShadow = true;
 
+  door1.lock = addCube(-25, 3.5, -1, false, colorOutline, edgeOutline, 2, 7, 4, 2);
+  door1.lock.open = false;
+
   door2 = door1.clone();
   door2.position.set(25, 4, -1);
   door2.castShadow = true;
+
+  door2.lock = addCube(25, 3.5, -1, false, colorOutline, edgeOutline, 2, 7, 4, 2);
+  door2.lock.open = false;
 
   door3 = door1.clone();
   door3.rotateY(Math.PI/2);
   door3.position.set(1, 4, 25);
   door3.castShadow = true;
+
+  door3.lock = addCube(1, 3.5, 25, false, colorOutline, edgeOutline, 4, 7, 2, 2);
+  door3.lock.open = false;
+
+  doors.push(door1);
+  doors.push(door2);
+  doors.push(door3);
 
   scene.add(door1)
   scene.add(door2)
@@ -561,6 +579,9 @@ function addCube(x, y, z, clickable, color, edge, i, j, k, linewidth){
   let cube = new THREE.Mesh(cubeGeometry, setDefaultMaterial(color));
   cube.position.set(x, y, z);
 
+  // Default y cube coordinates
+  cube.defaultY = y;
+
   var edgeGeometry = new THREE.EdgesGeometry(cube.geometry);
   let edgeMaterial = new THREE.LineBasicMaterial({ color: edge, linewidth: linewidth });
   var edges = new THREE.LineSegments(edgeGeometry, edgeMaterial);
@@ -642,7 +663,8 @@ function checkPlataformaInterruptores(){
 }
 
 function soltarBloco(){
-  highlightedCube.position.y = man.position.y + 1;
+  // highlightedCube.position.y = man.position.y + 1;
+  highlightedCube.position.y = highlightedCube.defaultY;
   updateCubeBox();
 
   // Check if it is on top of another plataforma block
@@ -735,6 +757,33 @@ function checkInterruptores(){
   }
 }
 
+function openDoors(){
+  for(let i=0; i<doors.length; i++){
+    let door = doors[i];
+
+    if((man.position.z >= door.position.z - 20 && man.position.z <= door.position.z + 10)
+      && (man.position.x >= door.position.x - 10 && man.position.x <= door.position.x + 10)){
+      if(!door.lock.open)
+        if((i == 2 && man.blueKey) || (i == 0 && man.yellowKey) || (i == 1 && man.redKey))
+          door.lock.position.y = -3.5;
+    }
+    else{
+      door.lock.position.y = 3.5;
+      door.lock.open = false;
+    }
+  }
+}
+
+function checkEndGame(){
+  // Check if player is inside area3 plataforma
+  if((man.position.x <= plataformaEnd.position.x + 1 && man.position.x >= plataformaEnd.position.x - 1)
+    && (man.position.z >= plataformaEnd.position.z - 1 && man.position.z <= plataformaEnd.position.z + 1)){
+    if(man.blueKey & man.redKey && man.yellowKey){
+      // Display winning text
+    }
+  }
+}
+
 function render()
 {
   // Resize camera
@@ -799,6 +848,9 @@ function render()
     arrayPlataforma[0] = false;
   }
 
+  // Checking if we need to open some doors
+  openDoors();
+
   // Checking for plataforma condition (area 3)
   if(arrayInterruptores[0] && arrayInterruptores[1]){
     area3Bridge.translateY(-3.5);
@@ -807,6 +859,9 @@ function render()
     // just to stop the bridge from looping forever
     arrayInterruptores[0] = false;
   }
+
+  // Checking end game
+  checkEndGame();
 
   renderer.render(scene, camera);
 }
