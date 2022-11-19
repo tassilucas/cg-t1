@@ -4,6 +4,8 @@ import GUI from '../libs/util/dat.gui.module.js'
 import KeyboardState from '../libs/util/KeyboardState.js'
 import {TrackballControls} from '../build/jsm/controls/TrackballControls.js';
 import {GLTFLoader} from '../build/jsm/loaders/GLTFLoader.js'
+import {FontLoader} from '../build/jsm/loaders/FontLoader.js'
+import {TextGeometry} from '../build/jsm/geometries/TextGeometry.js'
 import { OrbitControls } from '../build/jsm/controls/OrbitControls.js';
 import {initRenderer, 
         setDefaultMaterial,
@@ -46,12 +48,15 @@ var imaginaryBox = undefined;
 var helper = undefined;
 
 var lastDirection = undefined;
-var collision = false;
 
 const A = "a";
 const W = "w";
 const D = "d";
 const S = "s";
+const UP = 38;
+const DOWN = 40;
+const LEFT = 37;
+const RIGHT = 39;
 
 // Raycasting config to select objects
 const raycaster = new THREE.Raycaster();
@@ -149,8 +154,9 @@ function setup(){
   createTileGround(63, -3, 3, 52, 52, 26, 26, true, 0xEAEA97);
 
   // Area 4
-  createTileGround(-37, 0, 1, 20, 20, 10, 10, true);
-  plataformaEnd = addCube(-32, 0, 0, true, colorOutline, edgeOutline, 2, 0.1, 2, 2);
+  createTileGround(-34, 0, -1, 20, 20, 10, 10, true);
+  plataformaEnd = addCube(-35, 0, 0, true, colorOutline, edgeOutline, 2, 0.1, 2, 2);
+  contornaArea4();
 
   // Hard coded :(
   area1Setup();
@@ -198,6 +204,14 @@ function contornaArea3(){
     addCube(38, -2, -z-4, false, colorOutline, edgeOutline, 2, 2, 2, 2);
     addCube(88, -2, z+4, false, colorOutline, edgeOutline, 2, 2, 2, 2);
     addCube(88, -2, -z-4, false, colorOutline, edgeOutline, 2, 2, 2, 2);
+  }
+}
+
+function contornaArea4(){
+  for(let x=0; x<18; x = x+2){
+    addCube(-x-27, 1, 8, false, colorOutline, edgeOutline, 2, 2, 2, 2);
+    addCube(-x-27, 1, -8, false, colorOutline, edgeOutline, 2, 2, 2, 2);
+    addCube(-43, 1, x-8, false, colorOutline, edgeOutline, 2, 2, 2, 2);
   }
 }
 
@@ -440,6 +454,7 @@ function createDoors(){
   // Base objects
   let cubeMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 8, 6));
   let insideMesh = new THREE.Mesh(new THREE.BoxGeometry(5, 7, 4));
+  let geometry, material, sphere;
 
   // CSG holders
   let csgObject, cubeCSG, cylinderCSG;
@@ -459,6 +474,11 @@ function createDoors(){
 
   door1.lock = addCube(-25, 3.5, -1, false, colorOutline, edgeOutline, 2, 7, 4, 2);
   door1.lock.open = false;
+  geometry = new THREE.SphereGeometry(1, 32, 16);
+  material = new THREE.MeshBasicMaterial({color: 0x1E90FF});
+  sphere = new THREE.Mesh(geometry, material);
+  sphere.position.set(0, 8.5, -25);
+  scene.add(sphere);
 
   door2 = door1.clone();
   door2.position.set(25, 4, -1);
@@ -466,6 +486,11 @@ function createDoors(){
 
   door2.lock = addCube(25, 3.5, -1, false, colorOutline, edgeOutline, 2, 7, 4, 2);
   door2.lock.open = false;
+  geometry = new THREE.SphereGeometry(1, 32, 16);
+  material = new THREE.MeshBasicMaterial({color: 0xffff00});
+  sphere = new THREE.Mesh(geometry, material);
+  sphere.position.set(25, 8.5, -1);
+  scene.add(sphere);
 
   door3 = door1.clone();
   door3.rotateY(Math.PI/2);
@@ -474,6 +499,11 @@ function createDoors(){
 
   door3.lock = addCube(1, 3.5, 25, false, colorOutline, edgeOutline, 4, 7, 2, 2);
   door3.lock.open = false;
+  geometry = new THREE.SphereGeometry(1, 32, 16);
+  material = new THREE.MeshBasicMaterial({color: 0xFF0000});
+  sphere = new THREE.Mesh(geometry, material);
+  sphere.position.set(1, 8.5, 25);
+  scene.add(sphere);
 
   doors.push(door1);
   doors.push(door2);
@@ -529,6 +559,7 @@ function loadGLTFFile(modelName, player, n)
     if(player){
       man = obj;
       man.blueKey = man.redKey = man.yellowKey = false;
+      man.winner = false;
       man.castShadow = true;
       man.rotateY(3);
       var mixerLocal = new THREE.AnimationMixer(obj);
@@ -667,19 +698,22 @@ function updateMan(delta)
     // Rotating player
     rotateQuarternion.setFromAxisAngle(rotateAngle, directionOffset);
     man.quaternion.slerp(rotateQuarternion, 0.1);
-    movePlayer(manSpeed, directionOffset);
 
-    if(movingBlock()){
-      highlightedCube.quaternion.slerp(rotateQuarternion, 0.1);
+    if(canMove(directionOffset)){
+      movePlayer(manSpeed, directionOffset);
 
-      let manPos = man.position.clone();
-      manPos.z = manPos.z - 2.5;
-      manPos.y = manPos.y + 1.5;
-      highlightedCube.position.lerp(manPos, 0.5);
+      if(movingBlock()){
+        highlightedCube.quaternion.slerp(rotateQuarternion, 0.1);
+
+        let manPos = man.position.clone();
+        manPos.z = manPos.z - 2.5;
+        manPos.y = manPos.y + 1.5;
+        highlightedCube.position.lerp(manPos, 0.5);
+      }
+
+      if(directionOffset == Math.PI || directionOffset == 0 || directionOffset == Math.PI / 2 || directionOffset == - Math.PI / 2)
+        imaginaryBox.quaternion.slerp(rotateQuarternion, 1);
     }
-
-    if(directionOffset == Math.PI || directionOffset == 0 || directionOffset == Math.PI / 2 || directionOffset == - Math.PI / 2)
-      imaginaryBox.quaternion.slerp(rotateQuarternion, 1);
 
     // Update player box
     box.setFromObject(imaginaryBox);
@@ -772,7 +806,7 @@ function checkPlataforma(){
     if(blocosPlataforma[i].box.intersectsBox(highlightedCube.box)){
       let p = blocosPlataforma[i].position.clone();
       p.y = man.position.y;
-      blocosPlataforma[i].position.lerp(p, 1);
+      blocosPlataforma[i].position.lerp(p, 0.5);
       arrayPlataforma[i] = true;
     }
 }
@@ -781,7 +815,8 @@ function checkPlataformaInterruptores(){
   for(let i=0; i<2; i++){
     if(blocosInterruptores[i].box.intersectsBox(highlightedCube.box)){
       let p = blocosInterruptores[i].position.clone();
-      blocosInterruptores[i].position.y = man.position.y;
+      p.y = man.position.y - 0.5;
+      blocosInterruptores[i].position.lerp(p, 0.5);
       arrayInterruptores[i] = true;
     }
   }
@@ -856,8 +891,8 @@ function manCloseToHighlighted(){
   if(highlightedCube){
     // Now, we check if the player is close to the highlighted cube
     // by checking his coordinates against cube "intersection" box.
-    if((man.position.x >= highlightedCube.position.x - 1 && man.position.x <= highlightedCube.position.x + 3)
-      && (man.position.z >= highlightedCube.position.z - 1 && man.position.z <= highlightedCube.position.z + 3)){
+    if((man.position.x >= highlightedCube.position.x - 3 && man.position.x <= highlightedCube.position.x + 5)
+      && (man.position.z >= highlightedCube.position.z - 3 && man.position.z <= highlightedCube.position.z + 5)){
       return true;
     }
   }
@@ -914,12 +949,60 @@ function openDoors(){
   }
 }
 
+function displayWinningText(){
+  var loader = new FontLoader();
+  loader.load('fonts/helvetiker_bold.typeface.json', function(font) {
+
+  var firstGeometry = new TextGeometry( "PARABENS", {
+
+    font: font,
+
+    size: 5,
+    height: 1,
+    curveSegments: 12,
+
+    bevelThickness: 1,
+    bevelSize: 1,
+    bevelEnabled: true
+
+  });
+
+  var secondGeometry = new TextGeometry( "JOGO ENCERRADO", {
+
+    font: font,
+
+    size: 5,
+    height: 1,
+    curveSegments: 12,
+
+    bevelThickness: 1,
+    bevelSize: 1,
+    bevelEnabled: true
+
+  });
+
+  var textMaterial = new THREE.MeshPhongMaterial( 
+    { color: 0xffffff, specular: 0xffffff }
+  );
+
+  var firstMesh = new THREE.Mesh(firstGeometry, textMaterial);
+  firstMesh.position.set(-20, 10, 0);
+
+  var secondMesh = new THREE.Mesh(secondGeometry, textMaterial);
+  secondMesh.position.set(-30, 10, -10);
+
+  scene.add(firstMesh);
+  scene.add(secondMesh);
+});
+}
+
 function checkEndGame(){
   // Check if player is inside area3 plataforma
   if((man.position.x <= plataformaEnd.position.x + 1 && man.position.x >= plataformaEnd.position.x - 1)
     && (man.position.z >= plataformaEnd.position.z - 1 && man.position.z <= plataformaEnd.position.z + 1)){
     if(man.blueKey & man.redKey && man.yellowKey){
-      // Display winning text
+      displayWinningText();
+      man.winner = true;
     }
   }
 }
@@ -940,6 +1023,79 @@ function byPass(){
   if((man.position.z <= 0.5 && man.position.x >= -2.5)
     && (man.position.x >= 26.5 && man.position.x <= 31.55))
     return 2;
+}
+
+function canMove(directionOffset){
+  if(directionOffset == 0)
+    return true;
+
+  if(man.position.z <= -65.5){
+    if(blocosPonte[0][0] == false && blocosPonte[0][1] == false)
+      return false;
+
+    if(man.position.x < -1.5 && directionOffset == Math.PI/2)
+      return true;
+
+    if(man.position.x > 1.7 && directionOffset == -Math.PI/2)
+      return true;
+
+    if(man.position.x > 0.2 && directionOffset == -Math.PI/2)
+      return true;
+
+    if(man.position.z <= -65.5 && man.position.z >= -67){
+      // Check ponte distance
+      if(blocosPonte[0][0] == true && blocosPonte[0][1] == false){
+        if((man.position.x >= -1.5 && man.position.x <= 0.2) && man.position.z >= -67)
+          return true;
+        else
+          return false;
+      }
+      else if(blocosPonte[0][0] == true && blocosPonte[0][1] == true){
+        if((man.position.x >= -1.5 && man.position.x <= 1.7) && man.position.z >= -67)
+          return true;
+        else
+          return false;
+      }
+    }
+
+    // 2o nivel
+    else if(man.position.z < -67 && man.position.z >= -68.5){
+      if(blocosPonte[1][0] == true && blocosPonte[1][1] == false){
+        if((man.position.x >= -1.5 && man.position.x <= 0.2) && man.position.z >= -68.5)
+          return true;
+        else
+          return false;
+      }
+      else if(blocosPonte[1][0] == true && blocosPonte[1][1] == true){
+        if((man.position.x >= -1.5 && man.position.x <= 1.7) && man.position.z >= -68.5)
+          return true;
+        else
+          return false;
+      }
+      else
+        return false;
+    }
+    else if(man.position.z < -68.5 && man.position.z >= -70){
+      if(blocosPonte[2][0] == true && blocosPonte[2][1] == false){
+        if((man.position.x >= -1.5 && man.position.x <= 0.2) && man.position.z >= -70)
+            return true;
+          else
+            return false;
+      }
+      else if(blocosPonte[2][0] == true && blocosPonte[2][1] == true){
+        if((man.position.x >= -1.5 && man.position.x <= 1.7) && man.position.z >= -70)
+          return true;
+        else
+          return false;
+      }
+      else
+        return false;
+    }
+    else
+      false
+  }
+
+  return true;
 }
 
 function render()
@@ -1019,7 +1175,8 @@ function render()
   }
 
   // Checking end game
-  checkEndGame();
+  if(!man.winner)
+    checkEndGame();
 
   renderer.render(scene, camera);
 }
