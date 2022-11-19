@@ -158,52 +158,7 @@ function setup(){
   area3Setup();
 }
 
-function contornaArea1(){
-  for(let z=0; z<32; z = z + 2){
-    addCube(-24, -2, -35-z, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-    addCube(26, -2, -35-z, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-  }
-
-  for(let x=0; x<22; x = x + 2){
-    addCube(x+4, -2, -35, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-    addCube(-x-4, -2, -35, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-    addCube(x+4, -2, -65, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-    addCube(-x-4, -2, -65, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-  }
-}
-
-function contornaArea2(){
-  for(let x=0; x<22; x = x + 2){
-    addCube(x+5, 4, 35, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-    addCube(-x-3, 4, 35, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-    addCube(x+5, 4, 65, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-    addCube(-x-3, 4, 65, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-  }
-
-  addCube(-25, 4, 35, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-  addCube(-25, 4, 65, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-
-  for(let z=0; z<32; z = z + 2){
-    addCube(-25, 4, z+35, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-    addCube(25, 4, z+35, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-  }
-}
-
-function contornaArea3(){
-  for(let x=0; x<52; x=x+2)
-    addCube(x+38, -2, 28, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-
-  for(let z=0; z<26; z=z+2){
-    addCube(38, -2, z+4, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-    addCube(38, -2, -z-4, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-    addCube(88, -2, z+4, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-    addCube(88, -2, -z-4, false, colorOutline, edgeOutline, 2, 2, 2, 2);
-  }
-}
-
-function area1Setup(){
-  contornaArea1();
-
+async function area1Setup(){
   // Area 1 directional lights
   let lightPosition = new THREE.Vector3(15, 10, -60);
   let lightColor = "rgb(255, 255, 255)";
@@ -250,8 +205,6 @@ function area1Setup(){
 }
 
 function area2Setup(){
-  contornaArea2();
-
   // Area 2 directional lights
   let lightPosition = new THREE.Vector3(15, 10, 40);
   let lightColor = "rgb(255, 255, 255)";
@@ -291,7 +244,7 @@ function area2Setup(){
   createTileGround(0, 3, 71, 10, 10, 5, 5, true);
   
   // Key area ->> adding the key bridge
-  area2Bridge = addCube(1, 3.35, 65, false, "#ff0fff", "#ff0fff", 6, 5, 2, 2);
+  area2Bridge = addCube(0, 3.35, 65, false, "#ff0fff", "#ff0fff", 10, 5, 2, 2);
 
   // Area
   addCube(-9, 4, 51, true, "#FF9900", "#A36200", 2, 2, 2, 2);
@@ -304,8 +257,6 @@ function area2Setup(){
 }
 
 function area3Setup(){
-  contornaArea3();
-
   let inicioArea = 62.5
   let finalArea = 37.5 + 52;
 
@@ -388,7 +339,7 @@ function area3Setup(){
   }
 
   // Stairs
-  addCube(35, -4, -1, false, colorStairs, edgeStairs, 14, 1, 4, 2);
+  addCube(32, -4, -1, false, colorStairs, edgeStairs, 8, 1, 4, 2);
   addCube(28, -3, -1, false, colorStairs, edgeStairs, 1, 1, 4, 2);
   addCube(27, -2, -1, false, colorStairs, edgeStairs, 1, 1, 4, 2);
   addCube(26, -1, -1, false, colorStairs, edgeStairs, 1, 1, 4, 2);
@@ -403,9 +354,9 @@ function area3Setup(){
   spotLight.castShadow = true;
   spotLight.decay = 2;
   spotLight.penumbra = 0.6;
-  spotLight.angle = THREE.MathUtils.degToRad(30);
+  spotLight.angle = THREE.MathUtils.degToRad(20);
 
-  spotLight.target.position.set(93, 0, 0);
+  spotLight.target.position.set(95, 0, 0);
 
   // Shadow Parameters
   spotLight.shadow.mapSize.width = 50;
@@ -418,7 +369,7 @@ function area3Setup(){
   scene.add(spotLight);
 
   // Key area ->> adding the key bridge
-  area3Bridge = addCube(88, -3, 0, false, "#ff0fff", "#ff0fff", 6, 5, 2, 2);
+  area3Bridge = addCube(88, -3, 0, false, "#ff0fff", "#ff0fff", 10, 5, 2, 2);
   area3Bridge.rotateY(THREE.MathUtils.degToRad(90));
 
   // Area
@@ -671,11 +622,9 @@ function updateMan(delta)
 
     if(movingBlock()){
       highlightedCube.quaternion.slerp(rotateQuarternion, 0.1);
-
-      let manPos = man.position.clone();
-      manPos.z = manPos.z - 2.5;
-      manPos.y = manPos.y + 1.5;
-      highlightedCube.position.lerp(manPos, 0.5);
+      highlightedCube.position.copy(man.position);
+      highlightedCube.position.z = highlightedCube.position.z - 1;
+      highlightedCube.position.y = man.position.y + 1.5;
     }
 
     if(directionOffset == Math.PI || directionOffset == 0 || directionOffset == Math.PI / 2 || directionOffset == - Math.PI / 2)
@@ -856,10 +805,9 @@ function manCloseToHighlighted(){
   if(highlightedCube){
     // Now, we check if the player is close to the highlighted cube
     // by checking his coordinates against cube "intersection" box.
-    if((man.position.x >= highlightedCube.position.x - 1 && man.position.x <= highlightedCube.position.x + 3)
-      && (man.position.z >= highlightedCube.position.z - 1 && man.position.z <= highlightedCube.position.z + 3)){
+    if((man.position.x >= highlightedCube.x - 1 && man.position.x <= highlightedCube.x + 3)
+      && (man.position.z <= highlightedCube.z - 1 && man.position.z >= highlightedCube.z + 3))
       return true;
-    }
   }
 }
 
