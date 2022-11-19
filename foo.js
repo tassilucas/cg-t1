@@ -74,6 +74,9 @@ const edgeRandom = "#9b8a36";
 const colorTile = "#fce883";
 const edgeTile = "#8C8148";
 
+const colorStairs = "#964b00";
+const edgeStairs = "#523A28";
+
 //----------------------------------------------------------------------------
 var man = undefined;
 var time = 0;
@@ -108,15 +111,22 @@ let area3Actioned = false;
 
 let plataformaEnd;
 
-// Load animated files
-loadGLTFFile('../assets/objects/walkingMan.glb', true);
+var dirLight1, dirLight2;
+
+setup();
 
 function setup(){
+  // Load animated files
+  loadGLTFFile('../assets/objects/walkingMan.glb', true, 0);
+  loadGLTFFile('../assets/objects/blue_keycard.glb', false, 1);
+  loadGLTFFile('../assets/objects/red_keycard.glb', false, 2);
+  loadGLTFFile('../assets/objects/key.glb', false, 3);
+
   // Imaginary box
   const imaginaryBoxGeometry = new THREE.BoxGeometry(1, 3, 1);
   const imaginaryBoxEdges = new THREE.EdgesGeometry(imaginaryBoxGeometry);
   imaginaryBox = new THREE.LineSegments(imaginaryBoxEdges, new THREE.LineBasicMaterial({color: 0xffffff}));
-  imaginaryBox.position.y = 4;
+  imaginaryBox.position.y = 2;
 
   // Box config.
   box = new THREE.Box3().setFromObject(imaginaryBox);
@@ -127,112 +137,123 @@ function setup(){
   createDoors();
 
   // Main plane
-  createTileGround(0, 0, 0, 52, 52, true);
+  createTileGround(0, 0, 0, 52, 52, 26, 26, true);
 
   // Area 1
-  createTileGround(0, -3, -50, 52, 32, true, 0xEAEA97);
+  createTileGround(1, -3, -50, 52, 32, 26, 16, true, 0xEAEA97);
 
   // Area 2
-  createTileGround(0, 3, 50, 52, 32, true, 0xD2EBC7);
+  createTileGround(0, 3, 50, 52, 32, 26, 16, true, 0xD2EBC7);
 
   // Area 3
-  createTileGround(63, -3, 3, 52, 52, true, 0xEAEA97);
+  createTileGround(63, -3, 3, 52, 52, 26, 26, true, 0xEAEA97);
 
   // Area 4
-  createTileGround(-30, 0, 0, 20, 20, true);
-  plataformaEnd = addCube(-33, 0, 0, true, colorOutline, edgeOutline, 2, 0.1, 2, 2);
+  createTileGround(-37, 0, 1, 20, 20, 10, 10, true);
+  plataformaEnd = addCube(-32, 0, 0, true, colorOutline, edgeOutline, 2, 0.1, 2, 2);
 
+  // Hard coded :(
   area1Setup();
   area2Setup();
   area3Setup();
 }
 
-function area1Setup(){
+async function area1Setup(){
   // Area 1 directional lights
   let lightPosition = new THREE.Vector3(15, 10, -60);
   let lightColor = "rgb(255, 255, 255)";
-  let dirLight = new THREE.DirectionalLight(lightColor, 0.8);
+  dirLight1 = new THREE.DirectionalLight(lightColor, 0.3);
   
-  dirLight.position.copy(lightPosition);
-  dirLight.target.position.set(0, -10, -60);
+  dirLight1.position.copy(lightPosition);
+  dirLight1.target.position.set(0, -10, -60);
 
-  dirLight.castShadow = true;
-  dirLight.shadow.camera.top = 26;
-  dirLight.shadow.camera.bottom = - 20;
-  dirLight.shadow.camera.left = - 26;
-  dirLight.shadow.camera.right = 26;
-  dirLight.shadow.camera.near = 1;
-  dirLight.shadow.camera.far = 35;
+  dirLight1.castShadow = true;
+  dirLight1.shadow.camera.top = 26;
+  dirLight1.shadow.camera.bottom = - 20;
+  dirLight1.shadow.camera.left = - 30;
+  dirLight1.shadow.camera.right = 26;
+  dirLight1.shadow.camera.near = 1;
+  dirLight1.shadow.camera.far = 35;
 
-  scene.add(dirLight);
-  scene.add(dirLight.target);
-  scene.add(new THREE.CameraHelper(dirLight.shadow.camera));
+  scene.add(dirLight1);
+  scene.add(dirLight1.target);
+  scene.add(new THREE.CameraHelper(dirLight1.shadow.camera));
+
+  // Stairs
+  addCube(0, -3.25, -33, false, colorStairs, edgeStairs, 4, 0.5, 2, 2);
+  addCube(0, -2.75, -31.25, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(0, -2.50, -30.75, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(0, -2.25, -30.25, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(0, -2, -29.75, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(0, -1.75, -29.25, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(0, -1.5, -28.75, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(0, -1.25, -28.25, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(0, -1, -27.75, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(0, -0.75, -27.25, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(0, -0.5, -26.25, false, colorStairs, edgeStairs, 4, 0.5, 1, 2);
 
   // Key area
-  createTileGround(0, -3, -75, 10, 10, true);
-  let geometry = new THREE.SphereGeometry(1, 32, 16);
-  let material = new THREE.MeshBasicMaterial({color: 0x4FA7F7});
-  blueKey = new THREE.Mesh(geometry, material);
-  blueKey.castShadow = true;
-  blueKey.position.z = -77;
-  blueKey.position.y = -2;
-  blueKey.position.x = 0;
-  blueKeyBox = new THREE.Box3().setFromObject(blueKey);
-  scene.add(blueKey);
+  createTileGround(0, -3, -75, 10, 10, 5, 5, true);
 
   // Area
-  addCube(-10, -2, -50, true, colorOutline, edgeOutline, 2, 2, 2, 2);
-  addCube(10, -2, -50, true, colorOutline, edgeOutline, 2, 2, 2, 2);
-  addCube(-10, -2, -60, true, colorOutline, edgeOutline, 2, 2, 2, 2);
-  addCube(10, -2, -60, true, colorOutline, edgeOutline, 2, 2, 2, 2);
-  addCube(0, -2, -50, true, colorOutline, edgeOutline, 2, 2, 2, 2);
-  addCube(0, -2, -60, true, colorOutline, edgeOutline, 2, 2, 2, 2);
+  addCube(-10, -2, -49, true, colorOutline, edgeOutline, 2, 2, 2, 2);
+  addCube(10, -2, -49, true, colorOutline, edgeOutline, 2, 2, 2, 2);
+  addCube(-10, -2, -59, true, colorOutline, edgeOutline, 2, 2, 2, 2);
+  addCube(10, -2, -59, true, colorOutline, edgeOutline, 2, 2, 2, 2);
+  addCube(0, -2, -49, true, colorOutline, edgeOutline, 2, 2, 2, 2);
+  addCube(0, -2, -59, true, colorOutline, edgeOutline, 2, 2, 2, 2);
 }
 
 function area2Setup(){
   // Area 2 directional lights
   let lightPosition = new THREE.Vector3(15, 10, 40);
   let lightColor = "rgb(255, 255, 255)";
-  let dirLight = new THREE.DirectionalLight(lightColor, 0);
+  dirLight2 = new THREE.DirectionalLight(lightColor, 0.3);
   
-  dirLight.position.copy(lightPosition);
-  dirLight.target.position.set(0, -10, 40);
+  dirLight2.position.copy(lightPosition);
+  dirLight2.target.position.set(0, -10, 40);
 
-  dirLight.castShadow = true;
-  dirLight.shadow.camera.top = 26;
-  dirLight.shadow.camera.bottom = -20;
-  dirLight.shadow.camera.left = -35;
-  dirLight.shadow.camera.right = 16;
-  dirLight.shadow.camera.near = 1;
-  dirLight.shadow.camera.far = 35;
+  dirLight2.castShadow = true;
+  dirLight2.shadow.camera.top = 26;
+  dirLight2.shadow.camera.bottom = -20;
+  dirLight2.shadow.camera.left = -35;
+  dirLight2.shadow.camera.right = 16;
+  dirLight2.shadow.camera.near = 1;
+  dirLight2.shadow.camera.far = 35;
 
-  scene.add(dirLight);
-  scene.add(dirLight.target);
-  scene.add(new THREE.CameraHelper(dirLight.shadow.camera));
+  scene.add(dirLight2);
+  scene.add(dirLight2.target);
+  scene.add(new THREE.CameraHelper(dirLight2.shadow.camera));
+
+  // Stairs
+  addCube(1, 2.75, 33.5, false, colorStairs, edgeStairs, 4, 0.5, 2, 2);
+  addCube(1, 2.5, 32, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(1, 2.25, 31.5, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(1, 2, 31, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(1, 1.75, 30.5, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(1, 1.5, 30, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(1, 1.25, 29.5, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(1, 1, 29, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(1, 0.75, 28.5, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(1, 0.5, 28, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(1, 0.25, 27.5, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(1, 0, 27, false, colorStairs, edgeStairs, 4, 0.5, 0.5, 2);
+  addCube(1, -0.25, 26.5, false, colorStairs, edgeStairs, 4, 0.5, 2, 2);
 
   // Key area
-  createTileGround(0, 3, 71, 10, 10, true);
-  let geometry = new THREE.SphereGeometry(1, 32, 16);
-  let material = new THREE.MeshBasicMaterial({color: 0xd0312d});
-  redKey = new THREE.Mesh(geometry, material);
-  redKey.castShadow = true;
-  redKey.position.z = 70;
-  redKey.position.y = 4;
-  redKey.position.x = 0;
-  redKeyBox = new THREE.Box3().setFromObject(redKey);
-  scene.add(redKey);
+  createTileGround(0, 3, 71, 10, 10, 5, 5, true);
   
   // Key area ->> adding the key bridge
   area2Bridge = addCube(0, 3.35, 65, false, "#ff0fff", "#ff0fff", 10, 5, 2, 2);
 
   // Area
-  addCube(-10, 4, 50, true, "#FF9900", "#A36200", 2, 2, 2, 2);
-  addCube(10, 4, 50, true, "#FF9900", "#A36200", 2, 2, 2, 2);
-  addCube(0, 4, 50, true, "#FF9900", "#A36200", 2, 2, 2, 2);
+  addCube(-9, 4, 51, true, "#FF9900", "#A36200", 2, 2, 2, 2);
+  addCube(9, 4, 51, true, "#FF9900", "#A36200", 2, 2, 2, 2);
+  addCube(-1, 4, 51, true, "#FF9900", "#A36200", 2, 2, 2, 2);
 
-  blocosPlataforma.push(addCube(-10, 3.35, 60, false, colorBlockArea2, edgeBlockArea2, 2, 0.25, 2, 2));
-  blocosPlataforma.push(addCube(10, 3.35, 60, false, colorBlockArea2, edgeBlockArea2, 2, 0.25, 2, 2));
-  blocosPlataforma.push(addCube(0, 3.35, 60, false, colorBlockArea2, edgeBlockArea2, 2, 0.25, 2, 2));
+  blocosPlataforma.push(addCube(-9, 3.35, 61, false, colorBlockArea2, edgeBlockArea2, 2, 0.25, 2, 2));
+  blocosPlataforma.push(addCube(11, 3.35, 61, false, colorBlockArea2, edgeBlockArea2, 2, 0.25, 2, 2));
+  blocosPlataforma.push(addCube(1, 3.35, 61, false, colorBlockArea2, edgeBlockArea2, 2, 0.25, 2, 2));
 }
 
 function area3Setup(){
@@ -317,31 +338,48 @@ function area3Setup(){
     posInterruptor += 13;
   }
 
+  // Stairs
+  addCube(32, -4, -1, false, colorStairs, edgeStairs, 8, 1, 4, 2);
+  addCube(28, -3, -1, false, colorStairs, edgeStairs, 1, 1, 4, 2);
+  addCube(27, -2, -1, false, colorStairs, edgeStairs, 1, 1, 4, 2);
+  addCube(26, -1, -1, false, colorStairs, edgeStairs, 1, 1, 4, 2);
+  addCube(25.5, 0, -1, false, colorStairs, edgeStairs, 1, 0.5, 4, 2);
+
   // Key area
-  createTileGround(94, -3, 0, 10, 10, true);
-  let geometry = new THREE.SphereGeometry(1, 32, 16);
-  let material = new THREE.MeshBasicMaterial({color: 0xFFFF66});
-  yellowKey = new THREE.Mesh(geometry, material);
-  yellowKey.castShadow = true;
-  yellowKey.position.z = 0;
-  yellowKey.position.y = -2;
-  yellowKey.position.x = 94;
-  yellowKeyBox = new THREE.Box3().setFromObject(yellowKey);
-  scene.add(yellowKey);
+  createTileGround(94, -3, 0, 10, 10, 5, 5, true);
+
+  let spotLight = new THREE.SpotLight("rgb(255, 255, 255)");
+  spotLight.position.copy(new THREE.Vector3(95, 20, 0));
+  spotLight.distance = 0;
+  spotLight.castShadow = true;
+  spotLight.decay = 2;
+  spotLight.penumbra = 0.6;
+  spotLight.angle = THREE.MathUtils.degToRad(20);
+
+  spotLight.target.position.set(95, 0, 0);
+
+  // Shadow Parameters
+  spotLight.shadow.mapSize.width = 50;
+  spotLight.shadow.mapSize.height = 50;
+  spotLight.shadow.camera.fov = THREE.MathUtils.degToRad(20);
+  spotLight.shadow.camera.near = .1;    
+  spotLight.shadow.camera.far = 10;
+
+  scene.add(spotLight.target);
+  scene.add(spotLight);
 
   // Key area ->> adding the key bridge
   area3Bridge = addCube(88, -3, 0, false, "#ff0fff", "#ff0fff", 10, 5, 2, 2);
   area3Bridge.rotateY(THREE.MathUtils.degToRad(90));
 
   // Area
-  addCube(36+6.5, -2, -18, true, "#FF9900", "#A36200", 2, 2, 2, 2);
-  addCube(36+26+6.5, -2, -18, true, "#FF9900", "#A36200", 2, 2, 2, 2);
+  addCube(36+6, -2, -18, true, "#FF9900", "#000000", 2, 2, 2, 2);
+  addCube(36+26+6, -2, -18, true, "#FF9900", "#000000", 2, 2, 2, 2);
 
-  blocosInterruptores.push(addCube(36+20, -2.75, -18, false, colorBlockArea2, edgeBlockArea2, 2, 0.25, 2, 2));
-  blocosInterruptores.push(addCube(36+46, -2.75, -18, false, colorBlockArea2, edgeBlockArea2, 2, 0.25, 2, 2));
+  blocosInterruptores.push(addCube(36+20, -2.75, -18, false, colorBlockArea2, undefined, 2, 0.25, 2, 2));
+  blocosInterruptores.push(addCube(36+46, -2.75, -18, false, colorBlockArea2, undefined, 2, 0.25, 2, 2));
 }
 
-setup();
 render();
 
 function randomInteger(min, max) {
@@ -419,15 +457,14 @@ function contornaPlano(){
   }
 }
 
-function createTileGround(x, y, z, largura, altura, tiled, gcolor){
-  let groundPlane = createGroundPlane(largura, altura, 50, 50, gcolor);
-  groundPlane.rotateX(THREE.MathUtils.degToRad(-90));
+function createTileGround(x, y, z, largura, altura, w, h, tiled, gcolor){
+  let groundPlane = createGroundPlaneWired(largura, altura, w, h, 2, gcolor, "gainsboro");
   scene.add(groundPlane);
 
   groundPlane.position.set(x, y, z);
 }
 
-function loadGLTFFile(modelName, player)
+function loadGLTFFile(modelName, player, n)
 {
   var loader = new GLTFLoader( );
   loader.load(modelName, function (gltf){
@@ -438,20 +475,47 @@ function loadGLTFFile(modelName, player)
       }
     });
 
-    var obj = gltf.scene;
+    let obj = gltf.scene;
+
     if(player){
       man = obj;
       man.blueKey = man.redKey = man.yellowKey = false;
       man.castShadow = true;
       man.rotateY(3);
-      man.position.y = -3;
+      var mixerLocal = new THREE.AnimationMixer(obj);
+      mixer.push(mixerLocal);
+      mixerAnimations.push(gltf.animations)
+    }
+
+    if(n == 1){
+      blueKey = obj;
+      blueKey.castShadow = true;
+      blueKey.position.z = -77;
+      blueKey.position.y = -2;
+      blueKey.position.x = 0;
+      blueKeyBox = new THREE.Box3().setFromObject(blueKey);
+      scene.add(blueKey);
+    }
+    else if(n == 2){
+      redKey = obj;
+      redKey.castShadow = true;
+      redKey.position.z = 70;
+      redKey.position.y = 4;
+      redKey.position.x = 0;
+      redKeyBox = new THREE.Box3().setFromObject(redKey);
+      scene.add(redKey);
+    }
+    else if(n == 3){
+      yellowKey = obj;
+      yellowKey.castShadow = true;
+      yellowKey.position.z = 0;
+      yellowKey.position.y = -2;
+      yellowKey.position.x = 94;
+      yellowKeyBox = new THREE.Box3().setFromObject(yellowKey);
+      scene.add(yellowKey);
     }
 
     scene.add(obj);
-
-    var mixerLocal = new THREE.AnimationMixer(obj);
-    mixer.push(mixerLocal);
-    mixerAnimations.push(gltf.animations)
     });
 }
 
@@ -494,30 +558,6 @@ function isColliding(){
   return false;
 }
 
-function canMove(collisionFace, newDirection){
-  if(collisionFace == Math.PI &&
-    (newDirection == collisionFace - Math.PI/4
-      || newDirection == collisionFace + Math.PI/4))
-    return false;
-
-  if(collisionFace == Math.PI/2 &&
-    (newDirection == collisionFace - Math.PI/4
-      || newDirection == collisionFace + Math.PI/4))
-    return false;
-
-  if(collisionFace == 0 &&
-    (newDirection == collisionFace - Math.PI/4
-      || newDirection == collisionFace + Math.PI/4))
-    return false;
-
-  if(collisionFace == -Math.PI/2 &&
-    (newDirection == Math.PI + Math.PI/4
-      || newDirection == collisionFace + Math.PI/4))
-    return false;
-
-  return true;
-}
-
 function movePlayer(manSpeed, directionOffset){
   let playerPosition = man.position.clone();
 
@@ -529,6 +569,37 @@ function movePlayer(manSpeed, directionOffset){
 
   man.position.lerp(playerPosition, 0.01);
   imaginaryBox.position.lerp(playerPosition, 0.01);
+
+  // Check for stairs movements
+  switch(byPass()){
+    case 1: {
+      if(directionOffset == Math.PI)
+        man.position.y -= 0.05;
+      else if(directionOffset == 0)
+        man.position.y += 0.05;
+    }
+      break;
+    case 2: {
+      // Also reduces lights
+      if(directionOffset == Math.PI/2){
+        man.position.y -= 0.05;
+        if(dirLight1.intensity >= 0 && dirLight1.intensity <= 0.5)
+          dirLight1.intensity -= 0.005;
+        if(dirLight2.intensity >= 0 && dirLight2.intensity <= 0.5)
+          dirLight2.intensity -= 0.005;
+      }
+      else if(directionOffset == -Math.PI/2){
+        man.position.y += 0.05;
+        if(dirLight1.intensity >= 0 && dirLight1.intensity <= 0.5)
+          dirLight1.intensity += 0.005;
+        if(dirLight2.intensity >= 0 && dirLight2.intensity <= 0.5)
+          dirLight2.intensity += 0.005;
+      }
+    }
+      break;
+    default:
+      return;
+  }
 }
 
 function updateCubeBox(){
@@ -599,7 +670,7 @@ function addCube(x, y, z, clickable, color, edge, i, j, k, linewidth){
   cube.receiveShadow = true;
 
   scene.add(cube);
-  scene.add(cube.helper);
+  // scene.add(cube.helper);
   cubes.push(cube);
 
   return cube;
@@ -648,7 +719,9 @@ function placeBlocoPonte(i, j){
 function checkPlataforma(){
   for(let i=0; i<3; i++)
     if(blocosPlataforma[i].box.intersectsBox(highlightedCube.box)){
-      blocosPlataforma[i].position.y = man.position.y;
+      let p = blocosPlataforma[i].position.clone();
+      p.y = man.position.y;
+      blocosPlataforma[i].position.lerp(p, 1);
       arrayPlataforma[i] = true;
     }
 }
@@ -656,6 +729,7 @@ function checkPlataforma(){
 function checkPlataformaInterruptores(){
   for(let i=0; i<2; i++){
     if(blocosInterruptores[i].box.intersectsBox(highlightedCube.box)){
+      let p = blocosInterruptores[i].position.clone();
       blocosInterruptores[i].position.y = man.position.y;
       arrayInterruptores[i] = true;
     }
@@ -663,8 +737,9 @@ function checkPlataformaInterruptores(){
 }
 
 function soltarBloco(){
-  // highlightedCube.position.y = man.position.y + 1;
-  highlightedCube.position.y = highlightedCube.defaultY;
+  let highlightedCubePos = highlightedCube.position.clone();
+  highlightedCubePos.y = highlightedCube.defaultY;
+  highlightedCube.position.lerp(highlightedCubePos, 0.95);
   updateCubeBox();
 
   // Check if it is on top of another plataforma block
@@ -760,15 +835,19 @@ function checkInterruptores(){
 function openDoors(){
   for(let i=0; i<doors.length; i++){
     let door = doors[i];
+    let doorPos = door.position.clone();
 
     if((man.position.z >= door.position.z - 20 && man.position.z <= door.position.z + 10)
       && (man.position.x >= door.position.x - 10 && man.position.x <= door.position.x + 10)){
       if(!door.lock.open)
-        if((i == 2 && man.blueKey) || (i == 0 && man.yellowKey) || (i == 1 && man.redKey))
-          door.lock.position.y = -3.5;
+        if((i == 2 && man.blueKey) || (i == 0 && man.yellowKey) || (i == 1 && man.redKey)){
+          doorPos.y = -3.5
+          door.lock.position.lerp(doorPos, 0.1);
+        }
     }
     else{
-      door.lock.position.y = 3.5;
+      doorPos.y = 3.5;
+      door.lock.position.lerp(doorPos, 0.1);
       door.lock.open = false;
     }
   }
@@ -782,6 +861,24 @@ function checkEndGame(){
       // Display winning text
     }
   }
+}
+
+// Check if player is in stairs
+function byPass(){
+  // Entering area 1
+  if((man.position.x >= -1.5 && man.position.x <= 3.5)
+    && (man.position.z <= -26.5 && man.position.z >= -32.5))
+    return 1;
+
+  // Entering area 2
+  if((man.position.x >= -1.5 && man.position.x <= 3.5)
+    && (man.position.z >= 26.5 && man.position.z <= 32.5))
+    return 1;
+
+  // Entering area 3
+  if((man.position.z <= 0.5 && man.position.x >= -2.5)
+    && (man.position.x >= 26.5 && man.position.x <= 31.55))
+    return 2;
 }
 
 function render()
@@ -812,7 +909,7 @@ function render()
   updateCamera();
 
   // If player picks blue key
-  if(blueKey != undefined)
+  if(blueKey != undefined && blueKeyBox != undefined)
     if(blueKeyBox.intersectsBox(box)){
       scene.remove(blueKey);
       console.log("Você pegou a chave azul");
@@ -821,7 +918,7 @@ function render()
     }
 
   // If player picks blue key
-  if(redKey != undefined)
+  if(redKey != undefined && redKeyBox != undefined)
     if(redKeyBox.intersectsBox(box)){
       scene.remove(redKey);
       console.log("Você pegou a chave vermelha");
@@ -830,7 +927,7 @@ function render()
     }
 
   // If player picks yellow key
-  if(yellowKey != undefined)
+  if(yellowKey != undefined && yellowKeyBox != undefined)
     if(yellowKeyBox.intersectsBox(box)){
       scene.remove(yellowKey);
       console.log("Você pegou a chave amarela");
